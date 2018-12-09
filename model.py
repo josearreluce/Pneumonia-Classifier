@@ -1,46 +1,80 @@
 import tensorflow as tf
 from tensorflow import keras
-from os import listdir
-from scipy.misc import imread # May be outdated see: https://stackoverflow.com/questions/25102461/python-rgb-matrix-of-an-image
 import numpy as np
-import pickle
+from scipy.misc import imread
+from skimage.transform import resize
 
-# Load the training and testing data
+from os import listdir
+# Gather training data
 pneumonia_training_directory = './data/train/PNEUMONIA/'
 normal_training_directory = './data/train/NORMAL/'
 
-training_images = []
-training_labels = []
-print("Gathering Training Images")
+training_images, training_labels = [], []
+
 pcount = 0
 for filename in listdir(pneumonia_training_directory):
     image = imread(pneumonia_training_directory + filename)
-    #pneumonia_training_images.append((image, 1))
+    image = resize(image, (224, 224))
+    image = image.tolist()
+    image = np.array(image)
+
     training_images.append(image)
     training_labels.append(1)
-    print(pcount)
     pcount += 1
-print("FINISHED GATHERING PNEUMONIA")
+    #if pcount > 100:
+    #    break
+
 ncount = 0
 for filename in listdir(normal_training_directory):
     image = imread(normal_training_directory + filename)
-    print(image.shape)
-    #normal_training_images.append((image, 0))
+    image = resize(image, (224, 224))
+    image = image.tolist()
+    image = np.array(image)
+
     training_images.append(image)
     training_labels.append(0)
-    print(ncount)
     ncount += 1
-print("FINISHED GATHERING NORMAL")
+    #if ncount > 100:
+    #    break
 
+test_images = []
+test_labels = []
+
+normal_test_directory = './data/test/NORMAL/'
+pneumonia_test_directory = './data/test/PNEUMONIA/'
+
+count = 0
+for filename in listdir(normal_test_directory):
+    image = imread(normal_test_directory + filename)
+    image = resize(image, (224, 224))
+
+    test_images.append(image)
+    test_labels.append(0)
+    count += 1
+    #if count > 100:
+    #    break
+count = 0
+for filename in listdir(pneumonia_test_directory):
+    image = imread(pneumonia_test_directory + filename)
+    image = resize(image, (224, 224))
+
+    test_images.append(image)
+    test_labels.append(1)
+    count += 1
+    #if count > 100:
+    #    break
+# Convert images to grayscale if not already in grayscale
+for i in range(len(training_images)):
+    if training_images[i].ndim > 2:
+        training_images[i] = np.dot(training_images[i][..., :3], [0.29894, 0.58704, 0.11402])
 training_images = np.array(training_images)
-training_labels = np.array(training_labels)
-
-exit()
 training_images = training_images / 255.0
+
+training_labels = np.array(training_labels)
 
 
 model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28, 28)),
+    keras.layers.Flatten(input_shape=(224, 224)),
     keras.layers.Dense(128, activation=tf.nn.relu),
     keras.layers.Dense(10, activation=tf.nn.softmax)
 ])
@@ -60,15 +94,13 @@ test_images = test_images / 255.0
 test_loss, test_acc = model.evaluate(test_images, test_labels)
 print("Test Accuracy: ", test_acc)
 
-
-
-
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Conv2D
-from keras.layers import MaxPooling2D
-from keras.layers import Dropout
-from keras.layers import Flatten
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 class model():
