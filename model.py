@@ -120,7 +120,7 @@ class model():
 
     def create_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(224, 224, 5218)))
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(5528, 224, 224, 1)))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
@@ -162,6 +162,7 @@ class model():
         datagen.fit(train_images)
         print('Datagen fitted')
 
+        """
         self.model.fit_generator(
                 datagen.flow(train_images, train_labels, batch_size=self.batch_size),
                 steps_per_epoch=len(train_images) / self.batch_size,
@@ -171,14 +172,16 @@ class model():
         """
         # here's a more "manual" example
         for e in range(self.epochs):
-            print('Epoch', e)
+            print('Epoch:', e)
             batches = 0
-            for x_batch, y_batch in datagen.flow(train_images, train_labels, batch_size=self.batch_size):
-                model.fit(x_batch, y_batch) # TODO NEEDS CALLBACKS
-                batches += 1
-                if batches >= len(train_images) / 32:
-                    break
-        """
+            #for x_batch, y_batch in datagen.flow(train_images, train_labels, batch_size=self.batch_size):
+            print('     Batch:', batches)
+            #model.fit(x_batch, y_batch, verbose=1) # TODO NEEDS CALLBACKS
+            self.model.fit(train_images, train_labels, verbose=1) # TODO NEEDS CALLBACKS
+            batches += 1
+            if batches >= len(train_images) / self.batch_size:
+                break
+
     def evaluate(self):
         self.model.evaluate(self.test_data, self.test_labels)
 
@@ -199,7 +202,6 @@ class model():
             try:
                 image = imread(directory + filename)
                 image = image / 255
-                print(image.shape)
                 if (image.ndim == 3): # TODO Confirm if necessary
                     print(filename, image.shape)
                     image = self.rgb2gray(image)
