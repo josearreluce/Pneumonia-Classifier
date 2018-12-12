@@ -12,7 +12,8 @@ from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import model_from_json
-
+from sklearn.utils import shuffle
+from visualize import plot_training_alt, plot_training
 """
 # Gather training data
 pneumonia_training_directory = './data/train/PNEUMONIA/'
@@ -109,9 +110,10 @@ class model():
         self.batch_size = batch_size
         self.epochs = epochs
         self.verbose = verbose
-        self.numClasses = 2
+        self.num_classes = 2
         self.test_data = None
         self.test_labels = None
+        self.tracker = None
 
         self.model = self.create_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
@@ -138,81 +140,97 @@ class model():
         model.add(Flatten())
         model.add(Dense(512, activation='relu'))
         model.add(Dropout(0.5))
-        model.add(Dense(self.numClasses, activation='softmax'))
-
+        model.add(Dense(self.num_classes, activation='softmax'))
+        # TODO add/refine models
         return model
 
-    def train(self):
-        #(x_train, y_train), (x_test, y_test) = self.load_data()
-        train_images, train_labels = self.load_training_data()
-        print('Training Data Collected')
-        #test_images, test_labels = self.load_testing_data()
-
-        #y_train = np_utils.to_categorical(y_train, num_classes)
-        #y_test = np_utils.to_categorical(y_test, num_classes)
-
-        datagen = ImageDataGenerator(
+    def augment_data(self):
+        generator = ImageDataGenerator(
             #featurewise_center=True,
-            #featurewise_std_normalization=True,
+            featurewise_std_normalization=True,
+            # TODO brightness_range?
+            # TODO zoom_range?
+            # TODO some rotation?
+            # TODO add vert and horz offset ranges
             data_format='channels_last',
             horizontal_flip=True)
+        return generator
 
-        # compute quantities required for featurewise normalization
-        # (std, mean, and principal components if ZCA whitening is applied)
-        # datagen.fit(x_train)
-        datagen.fit(train_images)
+    def train(self):
+        train_images, train_labels, label_weights  = self.load_training_data()
+        test_images, test_labels = self.load_testing_data() # TODO use val not test
+        print('Training Data Collected')
+        '''
+        training_gen = ImageDataGenerator(
+            #featurewise_center=True,
+            featurewise_std_normalization=True,
+            # TODO brightness_range?
+            # TODO add vert and horz offset ranges
+            data_format='channels_last',
+            horizontal_flip=True)
+        '''
+        training_gen = self.augment_data()
+        training_gen.fit(train_images)
 
-        self.model.fit_generator(
-                datagen.flow(train_images, train_labels, batch_size=self.batch_size),
-                steps_per_epoch=len(train_images) // self.batch_size,
+        test_gen = self.augment_data()
+        test_gen.fit(test_images)
+
+        '''
+        breaker = keras.callbacks.EarlyStopping( # TODO Use this to test until val_loss is good enough or not improving
+                monitor='val_loss',
+                min_delta=0,
+                patience=0,
+                verbose=0,
+                mode='auto',
+                baseline=None,
+                restore_best_weights=False)
+        '''
+
+        tracker = self.model.fit_generator(
+                training_gen.flow(train_images, train_labels, batch_size=self.batch_size),
                 epochs=self.epochs,
+                steps_per_epoch=len(train_images) // self.batch_size,
+                class_weight=label_weights,  # TODO needs class weights
+                shuffle=True, # TODO conf if necessary,
+                validation_data=test_gen.flow(test_images, test_labels, batch_size=self.batch_size), # TODO this should be using images from val not test
+                validation_steps=len(test_images) // self.batch_size, # TODO confirm stesp
                 verbose=self.verbose)
+                # TODO needs test batches for beter epoch eval
 
-        """
-        # here's a more "manual" example
-        for e in range(self.epochs):
-            print('Epoch:', e)
-            batches = 0
-            #for x_batch, y_batch in datagen.flow(train_images, train_labels, batch_size=self.batch_size):
-            print('     Batch:', batches)
-            #model.fit(x_batch, y_batch, verbose=1) # TODO NEEDS CALLBACKS
-            self.model.fit(train_images, train_labels, verbose=1) # TODO NEEDS CALLBACKS
-            batches += 1
-            if batches >= len(train_images) / self.batch_size:
-                break
-        """
+        print(tracker.history['acc'])
+        print(tracker.history['val_acc'])
+        print(tracker.history['loss'])
+        print(tracker.history['val_loss'])
+        plot_training(tracker)
+        plot_training_alt(tracker, self.epochs)
 
     def evaluate(self):
-        if not self.test_data:
+        if len(self.test_data) == 0:
             print('Getting Test Data')
             self.load_testing_data()
 
-        self.model.evaluate(
+        evaluate = self.model.evaluate(
                 self.test_data,
                 self.test_labels,
                 #steps=len(self.test_data) // self.batch_size,
                 verbose=1)
+        print(evaluate) # TODO [loss, accuracy]
+        return evaluate
 
     # from hw2 assignment
     def rgb2gray(self, rgb):
         gray = np.dot(rgb[...,:3],[0.29894, 0.58704, 0.11402])
         return gray
 
-    def unison_shuffled_copies(self, images, labels):
-        assert len(images) == len(labels)
-        p = np.random.permutation(len(images))
-        return images[p], labels[p]
-
     def _load_data(self, directory, label):
         images, labels = [], []
         files = listdir(directory)
-        print('File Count:', len(files))
         count = 0
         for filename in files:
             try:
                 image = imread(directory + filename)
                 image = image / 255
-                if (image.ndim == 3):
+                if image.ndim == 3:
                     image = self.rgb2gray(image)
                 image = resize(image, (224, 224, 1))
                 images.append(image)
@@ -220,7 +238,7 @@ class model():
             except Exception as i:
                 print('CAUGHT: ', i)
             count += 1
-            if count > 20:
+            if count > 40:
                 break
 
         return np.array(images), np.array(labels)
@@ -232,20 +250,18 @@ class model():
         training_images_sick, training_labels_sick = self._load_data(pneumonia_training_directory, 1)
         training_images_norm, training_labels_norm = self._load_data(normal_training_directory, 0)
 
-        print("Got Data")
-        print(training_images_sick.shape)
-        print(training_images_norm.shape)
-        print(training_labels_sick.shape)
-        print(training_labels_norm.shape)
-
         training_images = np.concatenate((training_images_sick, training_images_norm), axis=0)
         training_labels = np.concatenate((training_labels_sick, training_labels_norm), axis=0)
-        print("Combined Data")
 
-        #training_labels.extend(training_labels_2)
+        shuff_images, shuff_labels = shuffle(training_images, training_labels, random_state=5)
 
-        print('Training Data Details- Images:', training_images.shape, 'Labels:', training_labels.shape)
-        return training_images, training_labels
+        print('Training Data Details- Images:', shuff_images.shape, 'Labels:', shuff_labels.shape)
+        # See visualize.py for logic
+        weight_dict = {
+                1 : 1,
+                0 : len(training_images_sick) // len(training_images_norm)
+            }
+        return shuff_images, shuff_labels, weight_dict
 
     def load_testing_data(self):
         normal_test_directory = './data/test/NORMAL/'
@@ -260,7 +276,7 @@ class model():
         self.test_data = test_images
         self.test_labels = test_labels
 
-        print('Test Data Details:', test_images.shape, test_labels.shape)
+        print('Test Data Details- Images:', test_images.shape, 'Labels:', test_labels.shape)
         return test_images, test_labels
 
     # serialize model to JSON
@@ -282,7 +298,7 @@ class model():
         self.model = loaded_model
         print("Loaded model from disk")
 
-new_model = model(epochs=1, batch_size=10)
+new_model = model(epochs=10, batch_size=10)
 new_model.train()
 print(new_model.evaluate())
 new_model.save_model()
