@@ -45,6 +45,38 @@ def training_data_details():
     plt.show()
 
 
+def plot_training(tracker):
+    # Loss Curves
+    plt.figure(figsize=[8,6])
+    plt.plot(tracker.history['loss'],'r',linewidth=3.0)
+    plt.plot(tracker.history['val_loss'],'b',linewidth=3.0)
+    plt.legend(['Training loss', 'Validation Loss'],fontsize=18)
+    plt.xlabel('Epochs ',fontsize=16)
+    plt.ylabel('Loss',fontsize=16)
+    plt.title('Loss Curves',fontsize=16)
+
+    # Accuracy Curves
+    plt.figure(figsize=[8,6])
+    plt.plot(tracker.history['acc'],'r',linewidth=3.0)
+    plt.plot(tracker.history['val_acc'],'b',linewidth=3.0)
+    plt.legend(['Training Accuracy', 'Validation Accuracy'],fontsize=18)
+    plt.xlabel('Epochs ',fontsize=16)
+    plt.ylabel('Accuracy',fontsize=16)
+    plt.title('Accuracy Curves',fontsize=16)
+    plt.show()
+
+def plot_training_alt(tracker, epochs):
+    # plot the training loss and accuracy
+    plt.style.use("ggplot")
+    plt.figure()
+    N = epochs
+    plt.plot(np.arange(0, N), tracker.history["loss"], label="train_loss")
+    plt.plot(np.arange(0, N), tracker.history["acc"], label="train_acc")
+    plt.title("Training Loss and Accuracy on Santa/Not Santa")
+    plt.xlabel("Epoch #")
+    plt.ylabel("Loss/Accuracy")
+    plt.legend(loc="lower left")
+
 if __name__ == '__main__':
     training_data_details()
 
