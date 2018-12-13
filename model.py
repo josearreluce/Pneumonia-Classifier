@@ -62,8 +62,9 @@ class model():
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(1024, activation='sigmoid'))
+        model.add(Dense(1024, activation='relu'))
         model.add(Dropout(0.5))
+        model.add(Dense(512, activation='relu')) # TODO CONFIRM
         model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
         # TODO add/refine models

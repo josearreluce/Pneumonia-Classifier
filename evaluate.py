@@ -4,16 +4,12 @@ import numpy as np
 from scipy.misc import imread
 from skimage.transform import resize
 from os import listdir
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import MaxPooling2D
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import model_from_json, Model
-from sklearn.utils import shuffle
+from tensorflow.keras import backend as K
+
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend
@@ -63,11 +59,10 @@ class evaluateModel():
             image = rgb2gray(image)
 
         preprocess_img = np.expand_dims(resize(image, (224, 224, 1)), axis=0)
+        #preprocess_img = resize(image, (224, 224, 1))
 
         label = self.add_prob(preprocess_img)
-        cam = self.cam2(image, preprocess_img)
-
-        #cam = self.cam(preprocess_img)
+        cam = self.class_activation_map(image, preprocess_img)
 
         plt.figure()
         plt.title(filename.split('/')[-1][:-5] + '\n')
@@ -81,56 +76,47 @@ class evaluateModel():
         plt.imshow(image, cmap='gray')
         plt.show()
 
-    def cam2(self, basic_img, img):
-        import matplotlib.image as mpimg
-        from tensorflow.keras import backend as K
-
-        #editing layers in the second model and saving as third model
+    def class_activation_map(self, basic_img, img):
 
         preds = self.model.predict(img)
-        argmax = np.argmax(preds[0])
-
-        final_conv =Conv2D(64, (3, 3), activation='relu', name='heat')(self.model.get_layer('final_model_conv').output)
-        mapping_model = Model(inputs=self.model.input, outputs=[final_conv])
-        mapping_model.predict(img)
-
-        output = mapping_model.output[:, argmax]
-        last_conv_layer = mapping_model.get_layer('heat')#'final_conv')
+        output = self.model.output[:, 0]
+        last_conv_layer = self.model.get_layer('final_model_conv')
 
         grads = K.gradients(output, last_conv_layer.output)[0]
         pooled_grads = K.mean(grads, axis=(0, 1, 2))
-        iterate = K.function([self.model.input], [pooled_grads, last_conv_layer.output[0]])
 
+        iterate = K.function([self.model.input], [pooled_grads, last_conv_layer.output[0]])
         pooled_grads_value, conv_layer_output_value = iterate([img])
-        for i in range(16):
+
+        for i in range(last_conv_layer.output.shape[-1]):
             conv_layer_output_value[:, :, i] *= pooled_grads_value[i]
 
-        heatmap = np.mean(conv_layer_output_value, axis=-1)
-        heatmap = np.maximum(heatmap, 0)
-        heatmap /= np.max(heatmap)
+        cam = np.mean(conv_layer_output_value, axis=-1)
+        cam = np.maximum(cam, 0)
+        cam /= np.max(cam)
+        cam = np.uint8(255 * cam)
+        mapping = cm.get_cmap('rainbow')#'jet')
+        heatmap = mapping(cam)
+        #heatmap[np.where(cam < 0.8)] = 0 # thresholding
+        heatmap = resize(heatmap, (basic_img.shape[0], basic_img.shape[1]))
 
-        import cv2
+        oppacity = 0.4
+        superimposed_img = np.array([
+                heatmap[:,:,0] * oppacity + basic_img,
+                heatmap[:,:,1] * oppacity + basic_img,
+                heatmap[:,:,2] * oppacity + basic_img
+            ])
+        superimposed_img = superimposed_img.transpose(1,2,0)
 
-        #heatmap = resize(heatmap, (basic_img.shape[0], basic_img.shape[1]))
-        heatmap = np.uint8(255 * heatmap)
-        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-        plt.imshow(heatmap)
-
-        basic_img = resize(basic_img,(basic_img.shape[0], basic_img.shape[1]))
-
-        heatmap = np.uint8(255 * heatmap)
-        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-        hif = .8
-        superimposed_img = heatmap #* hif + basic_img
-        output = './output.jpeg'
-        cv2.imwrite(output, superimposed_img)
-        img=mpimg.imread(output)
-        plt.imshow(heatmap)
+        plt.imshow(superimposed_img)
         plt.axis('off')
+
         return None
 
 
 if __name__ == '__main__':
-    evaluateModel().test('PNEUMONIA/person1949_bacteria_4880.jpeg')
+    tester = evaluateModel()
+    tester.test('PNEUMONIA/person1949_bacteria_4880.jpeg')
+    tester.test('NORMAL/NORMAL2-IM-1442-0001.jpeg')
 
 
