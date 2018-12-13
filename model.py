@@ -12,115 +12,36 @@ from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import model_from_json
+from sklearn.utils import shuffle
+from visualize import plot_training_alt, plot_training
 
-"""
-# Gather training data
-pneumonia_training_directory = './data/train/PNEUMONIA/'
-normal_training_directory = './data/train/NORMAL/'
+import numpy as np
+import matplotlib.pyplot as plt
+import timeit
+import os
+import glob
+import re
 
-training_images, training_labels = [], []
-
-pcount = 0
-for filename in listdir(pneumonia_training_directory):
-    image = imread(pneumonia_training_directory + filename)
-    image = resize(image, (224, 224))
-    image = image.tolist()
-    image = np.array(image)
-
-    training_images.append(image)
-    training_labels.append(1)
-    pcount += 1
-    #if pcount > 100:
-    #    break
-
-ncount = 0
-for filename in listdir(normal_training_directory):
-    image = imread(normal_training_directory + filename)
-    image = resize(image, (224, 224))
-    image = image.tolist()
-    image = np.array(image)
-
-    training_images.append(image)
-    training_labels.append(0)
-    ncount += 1
-    #if ncount > 100:
-    #    break
-
-test_images = []
-test_labels = []
-
-normal_test_directory = './data/test/NORMAL/'
-pneumonia_test_directory = './data/test/PNEUMONIA/'
-
-count = 0
-for filename in listdir(normal_test_directory):
-    image = imread(normal_test_directory + filename)
-    image = resize(image, (224, 224))
-
-    test_images.append(image)
-    test_labels.append(0)
-    count += 1
-    #if count > 100:
-    #    break
-count = 0
-for filename in listdir(pneumonia_test_directory):
-    image = imread(pneumonia_test_directory + filename)
-    image = resize(image, (224, 224))
-
-    test_images.append(image)
-    test_labels.append(1)
-    count += 1
-    #if count > 100:
-    #    break
-# Convert images to grayscale if not already in grayscale
-for i in range(len(training_images)):
-    if training_images[i].ndim > 2:
-        training_images[i] = np.dot(training_images[i][..., :3], [0.29894, 0.58704, 0.11402])
-training_images = np.array(training_images)
-training_images = training_images / 255.0
-
-training_labels = np.array(training_labels)
-
-
-model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(224, 224)),
-    keras.layers.Dense(128, activation=tf.nn.relu),
-    keras.layers.Dense(10, activation=tf.nn.softmax)
-])
-
-model.compile(optimizer=tf.train.AdamOptimizer(),
-              loss='sparse_categorical_crossentropy',
-              metrics=['accuracy'])
-
-model.fit(training_images, training_labels, epochs=50)
-
-# Gather the Test images too
-test_images = np.array(test_images)
-test_labels = np.array(test_labels)
-
-test_images = test_images / 255.0
-
-test_loss, test_acc = model.evaluate(test_images, test_labels)
-print("Test Accuracy: ", test_acc)
-"""
 
 class model():
     def __init__(self, batch_size=100, epochs=50, verbose=1):
         self.batch_size = batch_size
         self.epochs = epochs
         self.verbose = verbose
-        self.numClasses = 2
-        self.test_data = []
-        self.test_labels = []
+        self.num_classes = 2
+        self.test_data = None
+        self.test_labels = None
+        self.tracker = None
 
         self.model = self.create_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
-                           loss='sparse_categorical_crossentropy',
+                           #loss='sparse_categorical_crossentropy',
+                           loss='binary_crossentropy',
                            metrics=['accuracy'])
 
     def create_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(5528, 224, 224, 1)))
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(224, 224, 1)))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
@@ -130,114 +51,152 @@ class model():
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
-        model.add(Dense(self.numClasses, activation='softmax'))
-
+        model.add(Dense(1, activation='sigmoid'))
+        print(model.summary())
+        # TODO add/refine models
         return model
 
-    def train(self):
-        #(x_train, y_train), (x_test, y_test) = self.load_data()
-        train_images, train_labels = self.load_training_data()
-        print('Training Data Collected')
-        #test_images, test_labels = self.load_testing_data()
-
-        #y_train = np_utils.to_categorical(y_train, num_classes)
-        #y_test = np_utils.to_categorical(y_test, num_classes)
-
-        datagen = ImageDataGenerator(
-            featurewise_center=True,
+    def augment_data(self):
+        generator = ImageDataGenerator(
+            #featurewise_center=True,
             featurewise_std_normalization=True,
+            # TODO brightness_range?
+            # TODO zoom_range?
+            # TODO some rotation?
+            # TODO add vert and horz offset ranges
+            data_format='channels_last',
             horizontal_flip=True)
-        print('Datagen')
-        # compute quantities required for featurewise normalization
-        # (std, mean, and principal components if ZCA whitening is applied)
-        # datagen.fit(x_train)
-        datagen.fit(train_images)
-        print('Datagen fitted')
+        return generator
 
-        """
-        self.model.fit_generator(
-                datagen.flow(train_images, train_labels, batch_size=self.batch_size),
-                steps_per_epoch=len(train_images) / self.batch_size,
+    def train(self):
+        train_images, train_labels, label_weights  = self.load_training_data()
+        test_images, test_labels = self.load_testing_data() # TODO use val not test
+        print('Training Data Collected')
+        '''
+        training_gen = ImageDataGenerator(
+            #featurewise_center=True,
+            featurewise_std_normalization=True,
+            # TODO brightness_range?
+            # TODO add vert and horz offset ranges
+            data_format='channels_last',
+            horizontal_flip=True)
+        '''
+        training_gen = self.augment_data()
+        training_gen.fit(train_images)
+
+        test_gen = self.augment_data()
+        test_gen.fit(test_images)
+
+        '''
+        breaker = keras.callbacks.EarlyStopping( # TODO Use this to test until val_loss is good enough or not improving
+                monitor='val_loss',
+                min_delta=0,
+                patience=0,
+                verbose=0,
+                mode='auto',
+                baseline=None,
+                restore_best_weights=False)
+        '''
+
+        tracker = self.model.fit_generator(
+                training_gen.flow(train_images, train_labels, batch_size=self.batch_size),
                 epochs=self.epochs,
-                verbose=2)
-        print('model fitted')
-        """
-        # here's a more "manual" example
-        for e in range(self.epochs):
-            print('Epoch:', e)
-            batches = 0
-            #for x_batch, y_batch in datagen.flow(train_images, train_labels, batch_size=self.batch_size):
-            print('     Batch:', batches)
-            #model.fit(x_batch, y_batch, verbose=1) # TODO NEEDS CALLBACKS
-            self.model.fit(train_images, train_labels, verbose=1) # TODO NEEDS CALLBACKS
-            batches += 1
-            if batches >= len(train_images) / self.batch_size:
-                break
+                steps_per_epoch=len(train_images) // self.batch_size,
+                class_weight=label_weights,  # TODO needs class weights
+                shuffle=True, # TODO conf if necessary,
+                validation_data=test_gen.flow(test_images, test_labels, batch_size=self.batch_size), # TODO this should be using images from val not test
+                validation_steps=len(test_images) // self.batch_size, # TODO confirm stesp
+                verbose=self.verbose)
+                # TODO needs test batches for beter epoch eval
+
+        print(tracker.history['acc'])
+        print(tracker.history['val_acc'])
+        print(tracker.history['loss'])
+        print(tracker.history['val_loss'])
+        plot_training(tracker)
+        plot_training_alt(tracker, self.epochs)
 
     def evaluate(self):
-        self.model.evaluate(self.test_data, self.test_labels)
+        if len(self.test_data) == 0:
+            print('Getting Test Data')
+            self.load_testing_data()
+
+        evaluate = self.model.evaluate(
+                self.test_data,
+                self.test_labels,
+                #steps=len(self.test_data) // self.batch_size,
+                verbose=1)
+        print(evaluate) # TODO [loss, accuracy]
+        return evaluate
 
     # from hw2 assignment
     def rgb2gray(self, rgb):
         gray = np.dot(rgb[...,:3],[0.29894, 0.58704, 0.11402])
         return gray
 
-    def unison_shuffled_copies(self, images, labels):
-        assert len(images) == len(labels)
-        p = numpy.random.permutation(len(images))
-        return images[p], labels[p]
-
-    def _load_data(self, directory, labels):
+    def _load_data(self, directory, label):
         images, labels = [], []
-
-        for filename in listdir(directory):
+        files = listdir(directory)
+        count = 0
+        for filename in files:
             try:
                 image = imread(directory + filename)
                 image = image / 255
-                if (image.ndim == 3): # TODO Confirm if necessary
-                    print(filename, image.shape)
+                if image.ndim == 3:
                     image = self.rgb2gray(image)
                 image = resize(image, (224, 224, 1))
                 images.append(image)
-                labels.append(labels)
+                labels.append(label)
             except Exception as i:
                 print('CAUGHT: ', i)
-        return images, labels
+            count += 1
+            if count > 80:
+                break
+
+        return np.array(images), np.array(labels)
 
     def load_training_data(self):
         pneumonia_training_directory = './data/train/PNEUMONIA/'
         normal_training_directory = './data/train/NORMAL/'
 
-        training_images, training_labels = self._load_data(pneumonia_training_directory, 1)
-        training_images_2, training_labels_2 = self._load_data(normal_training_directory, 0)
-        training_images = np.concatenate((training_images, training_images_2), axis=0)
-        training_labels.extend(training_labels_2)
+        training_images_sick, training_labels_sick = self._load_data(pneumonia_training_directory, 1)
+        training_images_norm, training_labels_norm = self._load_data(normal_training_directory, 0)
 
-        print('Training Data Details:', training_images.shape, len(training_labels))
-        return training_images, training_labels
+        training_images = np.concatenate((training_images_sick, training_images_norm), axis=0)
+        training_labels = np.concatenate((training_labels_sick, training_labels_norm), axis=0)
+
+        shuff_images, shuff_labels = shuffle(training_images, training_labels, random_state=5)
+
+        print('Training Data Details- Images:', shuff_images.shape, 'Labels:', shuff_labels.shape)
+        # See visualize.py for logic
+        weight_dict = {
+                1 : 1,
+                0 : len(training_images_sick) // len(training_images_norm)
+            }
+        return shuff_images, shuff_labels, weight_dict
 
     def load_testing_data(self):
         normal_test_directory = './data/test/NORMAL/'
         pneumonia_test_directory = './data/test/PNEUMONIA/'
 
-        test_images, test_labels = self._load_data(pneumonia_test_directory, 1)
-        test_images_2, test_labels_2 = self._load_data(normal_test_directory, 0)
+        test_images_sick, test_labels_sick = self._load_data(pneumonia_test_directory, 1)
+        test_images_norm, test_labels_norm = self._load_data(normal_test_directory, 0)
 
-        test_images = np.concatenate((test_images, test_images_2), axis=0)
-        test_labels = np.concatenate((test_labels, test_labels_2), axis=0)
+        test_images = np.concatenate((test_images_sick, test_images_norm), axis=0)
+        test_labels = np.concatenate((test_labels_sick, test_labels_norm), axis=0)
 
         self.test_data = test_images
         self.test_labels = test_labels
 
-        print('Test Data Details:', test_images.shape, test_labels.shape)
+        print('Test Data Details- Images:', test_images.shape, 'Labels:', test_labels.shape)
         return test_images, test_labels
 
     # serialize model to JSON
@@ -246,7 +205,7 @@ class model():
         with open("model.json", "w") as json_file:
             json_file.write(model_json)
         # serialize weights to HDF5
-        model.save_weights("model.h5")
+        self.model.save_weights("model.h5")
         print("Saved model to disk")
 
     # load json and create model
@@ -259,7 +218,7 @@ class model():
         self.model = loaded_model
         print("Loaded model from disk")
 
-new_model = model(epochs=1, batch_size=100)
+new_model = model(epochs=10, batch_size=10)
 new_model.train()
 print(new_model.evaluate())
 new_model.save_model()
