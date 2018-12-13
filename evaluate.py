@@ -90,15 +90,12 @@ class evaluateModel():
         preds = self.model.predict(img)
         argmax = np.argmax(preds[0])
 
-        output = self.model.output[:, argmax]
-        last_conv_layer = self.model.get_layer('conv2d_5')#'final_conv')
-
-        final_conv =Conv2D(16, (3, 3), activation='relu', name='final_conv')(self.model.get_layer('conv2d_5').output)
+        final_conv =Conv2D(64, (3, 3), activation='relu', name='heat')(self.model.get_layer('final_model_conv').output)
         mapping_model = Model(inputs=self.model.input, outputs=[final_conv])
         mapping_model.predict(img)
 
         output = mapping_model.output[:, argmax]
-        last_conv_layer = mapping_model.get_layer('final_conv')#'final_conv')
+        last_conv_layer = mapping_model.get_layer('heat')#'final_conv')
 
         grads = K.gradients(output, last_conv_layer.output)[0]
         pooled_grads = K.mean(grads, axis=(0, 1, 2))

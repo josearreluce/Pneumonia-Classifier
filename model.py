@@ -51,13 +51,18 @@ class model():
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(128, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(256, (3, 3), activation='relu', name='final_model_conv'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(512, activation='sigmoid'))
+        model.add(Dense(1024, activation='sigmoid'))
         model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
@@ -157,9 +162,11 @@ class model():
                 labels.append(label)
             except Exception as i:
                 print('CAUGHT: ', i)
+            """
             count += 1
             if count > 80:
                 break
+            """
 
         return np.array(images), np.array(labels)
 
@@ -218,7 +225,7 @@ class model():
         self.model = loaded_model
         print("Loaded model from disk")
 
-new_model = model(epochs=10, batch_size=10)
+new_model = model(epochs=4, batch_size=100)
 new_model.train()
 print(new_model.evaluate())
 new_model.save_model()
