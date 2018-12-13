@@ -3,3 +3,6 @@ data/
 .DS_Store
 test_data.txt
 train_data.txt
+__pycache__/
+model.h5
+model.json
