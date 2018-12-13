@@ -15,6 +15,14 @@ from tensorflow.keras.models import model_from_json
 from sklearn.utils import shuffle
 from visualize import plot_training_alt, plot_training
 
+import numpy as np
+import matplotlib.pyplot as plt
+import timeit
+import os
+import glob
+import re
+
+
 class model():
     def __init__(self, batch_size=100, epochs=50, verbose=1):
         self.batch_size = batch_size
@@ -27,7 +35,8 @@ class model():
 
         self.model = self.create_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
-                           loss='sparse_categorical_crossentropy',
+                           #loss='sparse_categorical_crossentropy',
+                           loss='binary_crossentropy',
                            metrics=['accuracy'])
 
     def create_model(self):
@@ -42,15 +51,16 @@ class model():
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
-        model.add(Dense(self.num_classes, activation='softmax'))
+        model.add(Dense(1, activation='sigmoid'))
+        print(model.summary())
         # TODO add/refine models
         return model
 
@@ -148,7 +158,7 @@ class model():
             except Exception as i:
                 print('CAUGHT: ', i)
             count += 1
-            if count > 40:
+            if count > 80:
                 break
 
         return np.array(images), np.array(labels)
