@@ -11,7 +11,7 @@ from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import model_from_json
+from tensorflow.keras.models import model_from_json, Model
 from sklearn.utils import shuffle
 import matplotlib.pyplot as plt
 
@@ -85,20 +85,29 @@ class evaluateModel():
         import matplotlib.image as mpimg
         from tensorflow.keras import backend as K
 
+        #editing layers in the second model and saving as third model
+
         preds = self.model.predict(img)
         argmax = np.argmax(preds[0])
-        print(self.model.summary())
 
         output = self.model.output[:, argmax]
-        last_conv_layer = self.model.get_layer('conv2d_5')
-        print(last_conv_layer)
+        last_conv_layer = self.model.get_layer('conv2d_5')#'final_conv')
+
+        final_conv =Conv2D(16, (3, 3), activation='relu', name='final_conv')(self.model.get_layer('conv2d_5').output)
+        mapping_model = Model(inputs=self.model.input, outputs=[final_conv])
+        mapping_model.predict(img)
+
+        output = mapping_model.output[:, argmax]
+        last_conv_layer = mapping_model.get_layer('final_conv')#'final_conv')
+
         grads = K.gradients(output, last_conv_layer.output)[0]
         pooled_grads = K.mean(grads, axis=(0, 1, 2))
         iterate = K.function([self.model.input], [pooled_grads, last_conv_layer.output[0]])
 
         pooled_grads_value, conv_layer_output_value = iterate([img])
-        for i in range(32):
+        for i in range(16):
             conv_layer_output_value[:, :, i] *= pooled_grads_value[i]
+
         heatmap = np.mean(conv_layer_output_value, axis=-1)
         heatmap = np.maximum(heatmap, 0)
         heatmap /= np.max(heatmap)
