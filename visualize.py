@@ -5,22 +5,20 @@ import os
 import glob
 import re
 
-pneumonia_training_directory = './data/train/PNEUMONIA/'
-normal_training_directory = './data/train/NORMAL/'
 
 
-def training_data_details():
-    sicc = os.listdir(pneumonia_training_directory)
-    norm = os.listdir(normal_training_directory)
+def training_data_details(pneumonia, healthy):
+    sick = os.listdir(pneumonia)
+    norm = os.listdir(healthy)
 
-    bac = [f for f in sicc if re.match(r'.*_bacteria_.*.jpeg', f)]
-    vir = [f for f in sicc if re.match(r'.*_virus_.*.jpeg', f)]
+    bac = [f for f in sick if re.match(r'.*_bacteria_.*.jpeg', f)]
+    vir = [f for f in sick if re.match(r'.*_virus_.*.jpeg', f)]
 
-    print('Bacterial:', len(bac))
-    print('Viral:', len(vir))
-    print('Total Pneumonia', len(sicc))
+    print('Total Pneumonia', len(sick))
+    print('     Bacterial:', len(bac))
+    print('     Viral:', len(vir))
     print('Total Normal', len(norm))
-    print('Total Training Images', len(sicc) + len(norm))
+    print('Total Training Images', len(sick) + len(norm))
 
     fig, ax = plt.subplots()
     index = np.arange(4)
@@ -78,5 +76,8 @@ def plot_training_alt(tracker, epochs):
     plt.legend(loc="lower left")
 
 if __name__ == '__main__':
-    training_data_details()
+    training_data_details('./data/train/PNEUMONIA/', './data/train/NORMAL/')
+    training_data_details('./data/test/PNEUMONIA/', './data/test/NORMAL/')
+    training_data_details('./data/val/PNEUMONIA/','./data/val/NORMAL/')
+
 
