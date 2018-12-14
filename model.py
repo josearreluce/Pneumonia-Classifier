@@ -58,7 +58,7 @@ class model():
         x = Activation('relu')(x)
         x = Dropout(dropout_rate)(x)
 
-        predictions = Dense(1, activation='softmax')(x)
+        predictions = Dense(1, activation='sigmoid')(x)
         
         model = Model(vgg_model.input, predictions)
         print(model.summary())
