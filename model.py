@@ -52,11 +52,11 @@ class model():
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = Dropout(dropout_rate)(x)
-
-        x = Dense(512, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = Dropout(dropout_rate)(x)
+        #
+        # x = Dense(512, use_bias=False)(x)
+        # x = BatchNormalization()(x)
+        # x = Activation('relu')(x)
+        # x = Dropout(dropout_rate)(x)
 
         predictions = Dense(1, activation='sigmoid')(x)
         
