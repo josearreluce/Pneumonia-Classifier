@@ -32,6 +32,7 @@ class model():
         self.test_data = None
         self.test_labels = None
         self.tracker = None
+        self.img_shape = (500, 500, 1)
 
         self.model = self.create_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
@@ -41,7 +42,7 @@ class model():
 
     def create_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(224, 224, 1)))
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
@@ -74,6 +75,10 @@ class model():
         generator = ImageDataGenerator(
             #featurewise_center=True,
             featurewise_std_normalization=True,
+            width_shift_range=0.10,
+            height_shift_range=0.10,
+            brightness_range=(1.0, 1.2),
+            zoom_range=0.05,
             # TODO brightness_range?
             # TODO zoom_range?
             # TODO some rotation?
@@ -158,7 +163,7 @@ class model():
                 image = image / 255
                 if image.ndim == 3:
                     image = self.rgb2gray(image)
-                image = resize(image, (224, 224, 1))
+                image = resize(image, self.img_shape)
                 images.append(image)
                 labels.append(label)
             except Exception as i:
