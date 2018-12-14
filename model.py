@@ -37,7 +37,7 @@ class model():
         self.img_shape = (224, 224, 3)
 
         self.model = self.create_model()
-        self.model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=0.00001),
+        self.model.compile(optimizer=tf.train.AdamOptimizer(),
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
