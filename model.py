@@ -13,14 +13,14 @@ from tensorflow.keras.layers import Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import model_from_json
 from sklearn.utils import shuffle
-from visualize import plot_training_alt, plot_training
-
+from tensorflow.keras.applications.vgg16 import VGG16
 import numpy as np
 import matplotlib.pyplot as plt
 import timeit
 import os
 import glob
 import re
+from visualize import plot_training_alt, plot_training
 
 
 class model():
@@ -40,8 +40,10 @@ class model():
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
-    def create_model(self):
-        model = Sequential()
+    def create_model(self):       
+        model = VGG16()
+        print(model.summary()) 
+        #model = Sequential()
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
