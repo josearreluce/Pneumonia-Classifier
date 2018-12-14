@@ -38,7 +38,7 @@ class model():
 
         self.model = self.create_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
-                           loss='binary_crossentropy',
+                           loss='categorical_crossentropy',
                            metrics=['accuracy'])
 
     def create_model(self, dropout_rate=0.5):       
@@ -46,54 +46,31 @@ class model():
         for layer in vgg_model.layers[:-4]:
             layer.trainable = False
 
-        x = Flatten()(vgg_model.output)
-
-        x = Dense(1024, use_bias=False)(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = Dropout(dropout_rate)(x)
+        new_model = Sequential()
+        new_model.add(vgg_model)
+        new_model.add(Flatten())
+        new_model.add(Dense(1024, activation='relu'))
+        new_model.add(Dropout(0.5))
+        new_model.add(Dense(2, activation='softmax'))
+        # x = Flatten()(vgg_model.output)
+        #
+        # x = Dense(1024, use_bias=False)(x)
+        # x = BatchNormalization()(x)
+        # x = Activation('relu')(x)
+        # x = Dropout(dropout_rate)(x)
         #
         # x = Dense(512, use_bias=False)(x)
         # x = BatchNormalization()(x)
         # x = Activation('relu')(x)
         # x = Dropout(dropout_rate)(x)
 
-        predictions = Dense(1, activation='sigmoid')(x)
+        # predictions = Dense(1, activation='sigmoid')(x)
         
-        model = Model(vgg_model.input, predictions)
-        print(model.summary())
-        return model
+        # model = Model(vgg_model.input, predictions)
+        # print(model.summary())
+        print(new_model.summary())
+        return new_model
         #model = Sequential()
-        '''
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(128, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(256, (3, 3), activation='relu', name='final_model_conv'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Flatten())
-        model.add(Dense(1024, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(512, activation='relu')) # TODO CONFIRM
-        model.add(Dense(1, activation='sigmoid'))
-        print(model.summary())
-        # TODO add/refine models
-        return model
-        '''
 
     def augment_data(self):
         generator = ImageDataGenerator(
