@@ -46,24 +46,17 @@ class model():
         for layer in vgg_model.layers[:-4]:
             layer.trainable = False
 
-        x = Sequential()
-        x.add(vgg_model)
-        x.add(Flatten())
-        x.add(Dense(1024, activation='relu'))
-        x.add(Dropout(0.5))
-        x.add(Dense(512, activation = 'softmax'))
-        return x
-        # x = Flatten()(vgg_model.output)
-        #
-        # x = Dense(1024, use_bias=False)(x)
-        # x = BatchNormalization()(x)
-        # x = Activation('relu')(x)
-        # x = Dropout(dropout_rate)(x)
-        #
-        # x = Dense(512, use_bias=False)(x)
-        # x = BatchNormalization()(x)
-        # x = Activation('relu')(x)
-        # x = Dropout(dropout_rate)(x)
+        x = Flatten()(vgg_model.output)
+
+        x = Dense(1024, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(dropout_rate)(x)
+
+        x = Dense(512, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(dropout_rate)(x)
 
         predictions = Dense(1, activation='softmax')(x)
         
