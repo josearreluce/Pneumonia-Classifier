@@ -10,6 +10,8 @@ from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import Activation
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import model_from_json
 from sklearn.utils import shuffle
@@ -35,21 +37,29 @@ class model():
         self.img_shape = (224, 224, 3)
 
         self.model = self.create_model()
-        self.model.compile(optimizer=tf.train.AdamOptimizer(),
-                           #loss='sparse_categorical_crossentropy',
+        self.model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=0.00001),
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
-    def create_model(self):       
+    def create_model(self, dropout_rate=0.5):       
         vgg_model = VGG16(weights='imagenet', input_shape=self.img_shape, include_top=False)
-        print(vgg_model.summary()) 
-        x = Flatten()(vgg_model.output)
-        x = Dense(1024, activation='relu')(x)
-        x = Dropout(0.5)(x)
-        x = Dense(512, activation='relu')(x)
-        predictions = Dense(1, activation='sigmoid')(x)
         
-        model = Model(vgg_model.input, predictions) 
+        x = Flatten()(vgg_model.output)
+
+        x = Dense(1024, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(dropout_rate)(x)  
+
+        x = Dense(512, use_bias=False)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(dropout_rate)(x)
+
+        predictions = Dense(1, activation='softmax')(x)
+        
+        model = Model(vgg_model.input, predictions)
+        print(model.summary())
         return model
         #model = Sequential()
         '''
@@ -141,10 +151,10 @@ class model():
                 verbose=self.verbose)
                 # TODO needs test batches for beter epoch eval
 
-        print(tracker.history['acc'])
-        print(tracker.history['val_acc'])
-        print(tracker.history['loss'])
-        print(tracker.history['val_loss'])
+        print('Accuracy', tracker.history['acc'])
+        print('Val Acc', tracker.history['val_acc'])
+        print('Loss', tracker.history['loss'])
+        print('Val Loss', tracker.history['val_loss'])
         plot_training(tracker)
         plot_training_alt(tracker, self.epochs)
 
@@ -177,8 +187,6 @@ class model():
                 if image.ndim != 3:
                     image = np.array([[image], [image], [image]])
                     image = self.rgb2gray(image)
-                if image.ndim != 3:
-                    print(image.shape)
                 image = resize(image, self.img_shape)
                 images.append(image)
                 labels.append(label)
@@ -247,7 +255,7 @@ class model():
         self.model = loaded_model
         print("Loaded model from disk")
 
-new_model = model(epochs=4, batch_size=100)
+new_model = model(epochs=50, batch_size=100)
 new_model.train()
 print(new_model.evaluate())
 new_model.save_model()
