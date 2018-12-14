@@ -4,7 +4,7 @@ import numpy as np
 from scipy.misc import imread
 from skimage.transform import resize
 from os import listdir
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import MaxPooling2D
@@ -32,7 +32,7 @@ class model():
         self.test_data = None
         self.test_labels = None
         self.tracker = None
-        self.img_shape = (500, 500, 1)
+        self.img_shape = (224, 224, 3)
 
         self.model = self.create_model()
         self.model.compile(optimizer=tf.train.AdamOptimizer(),
@@ -41,9 +41,18 @@ class model():
                            metrics=['accuracy'])
 
     def create_model(self):       
-        model = VGG16()
-        print(model.summary()) 
+        vgg_model = VGG16(weights='imagenet', input_shape=self.img_shape, include_top=False)
+        print(vgg_model.summary()) 
+        x = Flatten()(vgg_model.output)
+        x = Dense(1024, activation='relu')(x)
+        x = Dropout(0.5)(x)
+        x = Dense(512, activation='relu')(x)
+        predictions = Dense(1, activation='sigmoid')(x)
+        
+        model = Model(vgg_model.input, predictions) 
+        return model
         #model = Sequential()
+        '''
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -72,6 +81,7 @@ class model():
         print(model.summary())
         # TODO add/refine models
         return model
+        '''
 
     def augment_data(self):
         generator = ImageDataGenerator(
@@ -81,6 +91,7 @@ class model():
             height_shift_range=0.10,
             brightness_range=(1.0, 1.2),
             zoom_range=0.05,
+            rotation_range=0.10,
             # TODO brightness_range?
             # TODO zoom_range?
             # TODO some rotation?
@@ -163,8 +174,11 @@ class model():
             try:
                 image = imread(directory + filename)
                 image = image / 255
-                if image.ndim == 3:
+                if image.ndim != 3:
+                    image = np.array([[image], [image], [image]])
                     image = self.rgb2gray(image)
+                if image.ndim != 3:
+                    print(image.shape)
                 image = resize(image, self.img_shape)
                 images.append(image)
                 labels.append(label)
