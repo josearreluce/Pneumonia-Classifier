@@ -51,76 +51,57 @@ class model():
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(128, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(512, activation='sigmoid'))
+        model.add(Dense(512, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
-        # TODO add/refine models
         return model
 
     def augment_data(self):
         generator = ImageDataGenerator(
-            #featurewise_center=True,
             featurewise_std_normalization=True,
-            # TODO brightness_range?
-            # TODO zoom_range?
-            # TODO some rotation?
-            # TODO add vert and horz offset ranges
-            data_format='channels_last',
-            horizontal_flip=True)
+            width_shift_range=0.10,
+            height_shift_range=0.10,
+            zoom_range=0.05,
+            rotation_range=0.10,
+            horizontal_flip=True,
+            data_format='channels_last')
+
         return generator
 
     def train(self):
         train_images, train_labels, label_weights  = self.load_training_data()
         test_images, test_labels = self.load_testing_data() # TODO use val not test
         print('Training Data Collected')
-        '''
-        training_gen = ImageDataGenerator(
-            #featurewise_center=True,
-            featurewise_std_normalization=True,
-            # TODO brightness_range?
-            # TODO add vert and horz offset ranges
-            data_format='channels_last',
-            horizontal_flip=True)
-        '''
         training_gen = self.augment_data()
         training_gen.fit(train_images)
 
-        test_gen = self.augment_data()
+        test_gen = ImageDataGenerator(
+            featurewise_std_normalization=True,
+            horizontal_flip=True,
+            data_format='channels_last')
         test_gen.fit(test_images)
-
-        '''
-        breaker = keras.callbacks.EarlyStopping( # TODO Use this to test until val_loss is good enough or not improving
-                monitor='val_loss',
-                min_delta=0,
-                patience=0,
-                verbose=0,
-                mode='auto',
-                baseline=None,
-                restore_best_weights=False)
-        '''
 
         tracker = self.model.fit_generator(
                 training_gen.flow(train_images, train_labels, batch_size=self.batch_size),
                 epochs=self.epochs,
                 steps_per_epoch=len(train_images) // self.batch_size,
-                class_weight=label_weights,  # TODO needs class weights
-                shuffle=True, # TODO conf if necessary,
-                validation_data=test_gen.flow(test_images, test_labels, batch_size=self.batch_size), # TODO this should be using images from val not test
-                validation_steps=len(test_images) // self.batch_size, # TODO confirm stesp
+                class_weight=label_weights,
+                shuffle=True,
+                validation_data=test_gen.flow(test_images, test_labels, batch_size=self.batch_size),
+                validation_steps=len(test_images) // self.batch_size,
                 verbose=self.verbose)
-                # TODO needs test batches for beter epoch eval
 
-        print(tracker.history['acc'])
-        print(tracker.history['val_acc'])
-        print(tracker.history['loss'])
-        print(tracker.history['val_loss'])
+        print('ACC',tracker.history['acc'])
+        print('LOSS', tracker.history['loss'])
+        print('VAL ACC', tracker.history['val_acc'])
+        print('VAL LOSS', tracker.history['val_loss'])
         plot_training(tracker)
         plot_training_alt(tracker, self.epochs)
 
@@ -132,9 +113,8 @@ class model():
         evaluate = self.model.evaluate(
                 self.test_data,
                 self.test_labels,
-                #steps=len(self.test_data) // self.batch_size,
                 verbose=1)
-        print(evaluate) # TODO [loss, accuracy]
+        print(evaluate) # [loss, accuracy]
         return evaluate
 
     # from hw2 assignment
@@ -145,7 +125,6 @@ class model():
     def _load_data(self, directory, label):
         images, labels = [], []
         files = listdir(directory)
-        count = 0
         for filename in files:
             try:
                 image = imread(directory + filename)
@@ -157,9 +136,6 @@ class model():
                 labels.append(label)
             except Exception as i:
                 print('CAUGHT: ', i)
-            count += 1
-            if count > 80:
-                break
 
         return np.array(images), np.array(labels)
 
