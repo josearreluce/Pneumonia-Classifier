@@ -63,7 +63,8 @@ def plot_training(tracker):
     plt.xlabel('Epochs ',fontsize=16)
     plt.ylabel('Accuracy',fontsize=16)
     plt.title('Accuracy Curves',fontsize=16)
-    plt.show()
+    plt.savefig('training.png')
+    #plt.show()
 
 def plot_training_alt(tracker, epochs):
     # plot the training loss and accuracy
@@ -76,7 +77,8 @@ def plot_training_alt(tracker, epochs):
     plt.xlabel("Epoch #")
     plt.ylabel("Loss/Accuracy")
     plt.legend(loc="lower left")
-
+    plt.savefig('training_alt.png')
+    
 if __name__ == '__main__':
     training_data_details()
 
