@@ -41,23 +41,23 @@ class model():
 
     def create_model(self):
         model = Sequential()
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(224, 224, 1)))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(244, 244, 1)))
+#        model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
+#        model.add(Dropout(0.25))
 
         model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
+#        model.add(Conv2D(64, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(128, (3, 3), activation='relu'))
+#        model.add(Conv2D(128, (3, 3), activation='relu', name='final_model_conv'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
         model.add(Dropout(0.25))
 
         model.add(Flatten())
-        model.add(Dense(512, activation='relu'))
+        model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
@@ -131,7 +131,7 @@ class model():
                 image = image / 255
                 if image.ndim == 3:
                     image = self.rgb2gray(image)
-                image = resize(image, (224, 224, 1))
+                image = resize(image, (244, 244, 1))
                 images.append(image)
                 labels.append(label)
             except Exception as i:
@@ -194,7 +194,7 @@ class model():
         self.model = loaded_model
         print("Loaded model from disk")
 
-new_model = model(epochs=10, batch_size=10)
+new_model = model(epochs=10, batch_size=100)
 new_model.train()
 print(new_model.evaluate())
 new_model.save_model()
