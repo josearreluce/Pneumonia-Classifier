@@ -5,9 +5,15 @@ import matplotlib.pyplot as plt
 from os import listdir
 
 
-def data_details(d_type, p_dir, n_dir):
-    infected = listdir(p_dir)
-    norm = listdir(n_dir)
+def data_details(d_type):
+    """
+    Given image data subdirectory type, gets information of image types available and
+    creates a visualization of that information and prints the raw counts as well
+
+    :d_type: the data subdirectory (train, test, or val)
+    """
+    infected = listdir('./data/' + d_type + '/PNEUMONIA/')
+    norm = listdir('./data/' + d_type + '/NORMAL/')
 
     bac = [f for f in infected if re.match(r'.*_bacteria_.*.jpeg', f)]
     vir = [f for f in infected if re.match(r'.*_virus_.*.jpeg', f)]
@@ -41,6 +47,10 @@ def data_details(d_type, p_dir, n_dir):
 
 
 def plot_training(tracker):
+    """
+    plots the training accuracy and loss over the span of the training session,
+    as well as the testing accuracy and loss
+    """
     # Loss Curves
     plt.figure(figsize=[8,6])
     plt.plot(tracker.history['loss'],'r',linewidth=3.0)
@@ -49,6 +59,7 @@ def plot_training(tracker):
     plt.xlabel('Epochs ',fontsize=16)
     plt.ylabel('Loss',fontsize=16)
     plt.title('Loss Curves',fontsize=16)
+    plt.savefig('training.png')
 
     # Accuracy Curves
     plt.figure(figsize=[8,6])
@@ -58,9 +69,13 @@ def plot_training(tracker):
     plt.xlabel('Epochs ',fontsize=16)
     plt.ylabel('Accuracy',fontsize=16)
     plt.title('Accuracy Curves',fontsize=16)
-    plt.savefig('training.png')
+    plt.savefig('testing.png')
 
 def plot_training_alt(tracker, epochs):
+    """
+    plots the training accuracy and loss over the span of the training session,
+    as well as the testing accuracy and loss, but does it all in one plot
+    """
     # plot the training loss and accuracy
     plt.style.use('ggplot')
     plt.figure()
@@ -76,7 +91,7 @@ def plot_training_alt(tracker, epochs):
     plt.savefig('training_alt.png')
 
 if __name__ == '__main__':
-    data_details('Training','./data/train/PNEUMONIA/','./data/train/NORMAL/')
-    data_details('Testing','./data/test/PNEUMONIA/','./data/test/NORMAL/')
-    data_details('Evaluation','./data/val/PNEUMONIA/','./data/val/NORMAL/')
+    data_details('train')
+    data_details('test')
+    data_details('val')
 
