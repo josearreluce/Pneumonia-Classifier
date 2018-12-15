@@ -1,33 +1,35 @@
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+from scipy.misc import imread
+from skimage.transform import resize
+from os import listdir
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.models import model_from_json, Model
+from tensorflow.keras import backend as K
+
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import numpy as np
-from os import listdir
-from skimage.transform import resize
-from tensorflow.train import AdamOptimizer
+
+from tensorflow.keras.models import Model
 from tensorflow.keras import backend
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.models import model_from_json
-from scipy.misc import imread
+from skimage.transform import resize
 
 class evaluateModel():
     def __init__(self):
         self.model = self.load_model()
         self.eval_dir = './data/val/'
-        # The shape of the image when passed to the model
-        self.img_shape = (224, 224, 1)
 
     def load_model(self):
-        """
-        Loads the model and trained weights created by train_model.py
-        """
         with open('model.json', 'r') as json_file:
             loaded_model_json = json_file.read()
-
         loaded_model = model_from_json(loaded_model_json)
-        loaded_model.load_weights('model.h5')
-        print('Loaded model')
+        # load weights into new model
+        loaded_model.load_weights("model.h5")
+        print("Loaded model from disk")
 
-        loaded_model.compile(optimizer=AdamOptimizer(),
+        loaded_model.compile(optimizer=tf.train.AdamOptimizer(),
+                           #loss='sparse_categorical_crossentropy',
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
@@ -35,72 +37,45 @@ class evaluateModel():
         return loaded_model
 
     def add_prob(self, image):
-        """
-        Given an image in proper input format, predict whether it is healthy or infected with
-        pneumonia, and return a label indicating so.
-
-        :return: a label string indicating pneumonia infection or not with the model's probability
-        """
         prediction = self.model.predict(image)
         sick = prediction[0,0]
         norm = 1 - sick
-        proba, label = (norm, 'Not Infected') if norm > sick else (sick, 'Pneumonia')
-        label = '{}: {}%'.format(label, round(proba * 100, 2))
+        proba, label = (norm, "Not Infected") if norm > sick else (sick, "Pneumonia")
+        label = "{}: {}%".format(label, round(proba * 100, 2))
         return label
 
+    # from hw2 assignment
     def rgb2gray(self, rgb):
-        """
-        From HW2 Assignment
-        Given an image in RGB format, convert image to one channel
-
-        :return: an image in grayscale
-        """
         gray = np.dot(rgb[...,:3],[0.29894, 0.58704, 0.11402])
         return gray
 
-    def class_activation_map(self, unformatted_image, formatted_image):
-        """
-        Creates a class activation heatmap given based on the loaded model, formats the heatmap
-        to back to the original dimensions, and creates a superimposed image of the heatmap on
-        the original image
+    def class_activation_map(self, basic_img, img):
 
-        :unformatted_image: a numpy array of the image, unformatted (for superimposing)
-        :formatted_image: A formatted numpy array of the image, ready to be passed to the model
-
-        :return: A superimposed image depicting class activation based on the model
-        """
-        preds = self.model.predict(formatted_image)
+        preds = self.model.predict(img)
         output = self.model.output[:, 0]
-
-        # Get last convolutional layer from the model
         last_conv_layer = self.model.get_layer('final_model_conv')
-        # Create gradient of the conv layer vs. the final output
-        grads = backend.gradients(output, last_conv_layer.output)[0]
-        mean_grads = backend.mean(grads, axis=(0, 1, 2))
+        grads = K.gradients(output, last_conv_layer.output)[0]
+        pooled_grads = K.mean(grads, axis=(0, 1, 2))
 
-        # Creates a function to grab the mean gradient and the raw conv layer output given an input
-        get_grad_and_conv = backend.function([self.model.input], [mean_grads, last_conv_layer.output[0]])
-        grouped_grads, final_conv_values = get_grad_and_conv([formatted_image])
+        iterate = K.function([self.model.input], [pooled_grads, last_conv_layer.output[0]])
+        pooled_grads_value, conv_layer_output_value = iterate([img])
 
-        # Apply the mean gradients calculated to the final convolutional layer
         for i in range(last_conv_layer.output.shape[-1]):
-            final_conv_values[:, :, i] *= grouped_grads[i]
+            conv_layer_output_value[:, :, i] *= pooled_grads_value[i]
 
-        # Normalize the output
-        cam = np.mean(final_conv_values, axis=-1)
+        cam = np.mean(conv_layer_output_value, axis=-1)
+        cam = np.maximum(cam, 0)
         cam /= np.max(cam)
         mapping = cm.get_cmap('rainbow_r')
         heatmap = mapping(np.uint8(255 * cam))
-        #heatmap[np.where(cam > 0.4)] = 0 # thresholding
-
-        # Convert heatmap back to original image dimensions
-        heatmap = resize(heatmap, (unformatted_image.shape[0], unformatted_image.shape[1]))
+        #heatmap[np.where(cam > 0.5)] = 0 # thresholding
+        heatmap = resize(heatmap, (basic_img.shape[0], basic_img.shape[1]))
 
         opacity = 0.4
         superimposed_img = np.array([
-                heatmap[:,:,0] * opacity + unformatted_image,
-                heatmap[:,:,1] * opacity + unformatted_image,
-                heatmap[:,:,2] * opacity + unformatted_image])
+                heatmap[:,:,0] * opacity + basic_img,
+                heatmap[:,:,1] * opacity + basic_img,
+                heatmap[:,:,2] * opacity + basic_img])
 
         superimposed_img = superimposed_img.transpose(1,2,0)
         superimposed_img /= np.max(superimposed_img)
@@ -108,15 +83,6 @@ class evaluateModel():
         return superimposed_img
 
     def show(self, filename, image, label, cam):
-        """
-        Given filename, raw image, and the calculated label and classification activation map,
-        displays the image next to the CAM for visual analysis
-
-        :filename: title of the display, used to verify proper labeling
-        :image: raw image in a numpy array format
-        :label: predicted label string to be added to the raw image
-        :cam: The superimposed class activation mapping
-        """
         fig=plt.figure(figsize=(15, 20), frameon=False, constrained_layout=True)
         plt.axis('off')
         plt.title('\n' + filename.split('/')[-1][:-5])
@@ -124,8 +90,8 @@ class evaluateModel():
         fig.add_subplot(1, 2, 1)
         plt.imshow(image, cmap='gray')
         plt.text(0.3, 0.3, label, size=15, color='black',
-            ha='left', va='top',
-            bbox=dict(boxstyle='round',
+            ha="left", va="top",
+            bbox=dict(boxstyle="round",
                 ec=(1., 0.5, 0.5),
                 fc=(1., 0.8, 0.8)))
         plt.axis('off')
@@ -139,17 +105,13 @@ class evaluateModel():
         plt.show()
 
     def test(self, filename):
-        """
-        Given a filename, generates a prediction label, a class activation map,
-        and displays them. Also prints the label.
-        """
         image = imread(self.eval_dir + filename)
         image = image / 255
 
         if (image.ndim == 3):
             image = rgb2gray(image)
 
-        preprocess_img = np.expand_dims(resize(image, self.img_shape), axis=0)
+        preprocess_img = np.expand_dims(resize(image, (224, 224, 1)), axis=0)
         label = self.add_prob(preprocess_img)
 
         cam = self.class_activation_map(image, preprocess_img)
@@ -158,9 +120,6 @@ class evaluateModel():
 
 
     def test_all(self):
-        """
-        Runs test (above) for all images in val. Alternates infected and healthy examples
-        """
         tester.test('PNEUMONIA/person1946_bacteria_4874.jpeg')
         tester.test('NORMAL/NORMAL2-IM-1427-0001.jpeg')
         tester.test('PNEUMONIA/person1946_bacteria_4875.jpeg')
