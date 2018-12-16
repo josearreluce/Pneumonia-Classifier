@@ -5,16 +5,16 @@
 
 Created and tested using Python 3.6
 
-Run:
+1. Run:
 ```bash
 pip3 install -r requirements.txt
 ```
 
-Download the dataset from: [Kaggle Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia)
+2. Download the dataset from: [Kaggle Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia)
 
-Unzip the directory, and __rename the outermost directory from "chest_xray" to "data"__
+3. Unzip the directory, and __rename the outermost directory from "chest_xray" to "data"__
 
-Move the "data" directory into the same location as "model.py"
+4. Move the "data" directory into the same location as "model.py"
 
 ### Data Exploration
 Run "visualize.py" to see basic dataset information
