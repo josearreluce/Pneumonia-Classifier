@@ -54,7 +54,8 @@ class model():
         model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
-        '''
+
+        # BREAK
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -79,6 +80,26 @@ class model():
         model.add(Dense(1024, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(512, activation='relu')) # TODO CONFIRM
+        model.add(Dense(1, activation='sigmoid'))
+        '''
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(224, 224, 1)))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(128, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Flatten())
+        model.add(Dense(512, activation='sigmoid'))
+        model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
         return model
