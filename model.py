@@ -54,7 +54,7 @@ class model():
         model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
-
+        '''
         # BREAK
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
         model.add(Conv2D(32, (3, 3), activation='relu'))
@@ -81,36 +81,16 @@ class model():
         model.add(Dropout(0.5))
         model.add(Dense(512, activation='relu')) # TODO CONFIRM
         model.add(Dense(1, activation='sigmoid'))
-        '''
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(224, 224, 1)))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(128, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Flatten())
-        model.add(Dense(512, activation='sigmoid'))
-        model.add(Dropout(0.5))
-        model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
         return model
 
     def augment_data(self):
         generator = ImageDataGenerator(
             featurewise_std_normalization=True,
-            width_shift_range=0.10,
-            height_shift_range=0.10,
-            zoom_range=0.05,
-            rotation_range=0.10,
+            #width_shift_range=0.10,
+            #height_shift_range=0.10,
+            #zoom_range=0.05,
+            #rotation_range=0.10,
             horizontal_flip=True,
             data_format='channels_last')
 
@@ -217,25 +197,37 @@ class model():
         return test_images, test_labels
 
     # serialize model to JSON
-    def save_model(self):
+    def save_model(self, filename='model'):
+        """
+        Save the model structure as filename.json and the trained model weights
+        as filename.h5
+
+        :filename: the name of the file to save the model as
+        """
         model_json = self.model.to_json()
-        with open("model.json", "w") as json_file:
+        with open(filename + '.json', 'w') as json_file:
             json_file.write(model_json)
         # serialize weights to HDF5
-        self.model.save_weights("model.h5")
-        print("Saved model to disk")
+        self.model.save_weights(filename + '.h5')
+        print('Saved model to as', filename)
 
-    # load json and create model
-    def load_model(self):
-        with open('model.json', 'r') as json_file:
+    def load_model(self, filename='model'):
+        """
+        load the model structure and model weights (must be named the same) from
+        filename.json and filename.h5 files
+
+        :filename: the model filename to load
+        """
+        with open(filename + '.json', 'r') as json_file:
             loaded_model_json = json_file.read()
-        loaded_model = model_from_json(loaded_model_json)
-        # load weights into new model
-        loaded_model.load_weights("model.h5")
-        self.model = loaded_model
-        print("Loaded model from disk")
 
-new_model = model(epochs=10, batch_size=100)
+        loaded_model = model_from_json(loaded_model_json)
+        loaded_model.load_weights(filename + '.h5')
+
+        self.model = loaded_model
+        print('Loaded model from', filename)
+
+new_model = model(epochs=4, batch_size=100)
 new_model.train()
 print(new_model.evaluate())
-new_model.save_model()
+new_model.save_model(filename='model')

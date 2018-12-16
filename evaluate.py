@@ -11,22 +11,22 @@ from scipy.misc import imread
 
 
 class evaluateModel():
-    def __init__(self):
-        self.model = self.load_model()
+    def __init__(self, filename='model'):
+        self.model = self.load_model(filename=filename)
         self.eval_dir = './data/val/'
         # The shape of the image when passed to the model
         self.img_shape = (224, 224, 1)
 
 
-    def load_model(self):
+    def load_model(self, filename='model'):
         """
         Loads the model and trained weights created by train_model.py
         """
-        with open('model.json', 'r') as json_file:
+        with open(filename + '.json', 'r') as json_file:
             loaded_model_json = json_file.read()
 
         loaded_model = model_from_json(loaded_model_json)
-        loaded_model.load_weights('model.h5')
+        loaded_model.load_weights(filename + '.h5')
         print('Loaded model')
 
         loaded_model.compile(optimizer=AdamOptimizer(),
@@ -80,7 +80,7 @@ class evaluateModel():
         output = self.model.output[:, 0]
 
         # Get last convolutional layer from the model
-        last_conv_layer = self.model.get_layer('final_model_conv')
+        last_conv_layer = self.model.get_layer('conv2d_5')#'final_model_conv')
         # Create gradient of the conv layer vs. the final output
         grads = backend.gradients(output, last_conv_layer.output)[0]
         mean_grads = backend.mean(grads, axis=(0, 1, 2))
@@ -190,6 +190,6 @@ class evaluateModel():
 
 
 if __name__ == '__main__':
-    tester = evaluateModel()
+    tester = evaluateModel(filename='model')
     tester.test_all()
 
