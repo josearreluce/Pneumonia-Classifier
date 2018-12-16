@@ -28,13 +28,14 @@ class model():
 
         self.model = self.create_model()
         self.model.compile(optimizer=AdamOptimizer(),
-                           #loss='sparse_categorical_crossentropy',
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
     def create_model(self):
+        """
+        Creates our best (so far) sequential CNN and prepares it for training.
+        """
         model = Sequential()
-        '''
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(244, 244, 1)))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -54,51 +55,33 @@ class model():
         model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
         model.add(Dense(1, activation='sigmoid'))
-        '''
-        # BREAK
-        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
-        model.add(Conv2D(32, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(64, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(128, (3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
-        model.add(Conv2D(256, (3, 3), activation='relu', name='final_model_conv'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.25))
-
-        model.add(Flatten())
-        model.add(Dense(1024, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(512, activation='relu')) # TODO CONFIRM
-        model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
         return model
 
     def augment_data(self):
+        """
+        Creates a data augmentation generator to be used for
+        random augmentation of training batch data
+
+        :return: the generator to be trained and used
+        """
         generator = ImageDataGenerator(
             featurewise_std_normalization=True,
-            #width_shift_range=0.10,
-            #height_shift_range=0.10,
-            #zoom_range=0.05,
-            #rotation_range=0.10,
             horizontal_flip=True,
             data_format='channels_last')
 
         return generator
 
     def train(self):
+        """
+        Collects training and testing data, starts data augmentation generators for each, and
+        fits the model with the test data, validating with the testing data after each epoch.
+
+        Once done, each epochs loss, acc, val_loss, and val_acc will be printed, and those
+        values will be greated into multiple plots and saved for viewing.
+        """
         train_images, train_labels, label_weights  = self.load_training_data()
-        test_images, test_labels = self.load_testing_data() # TODO use val not test
+        test_images, test_labels = self.load_testing_data()
         print('Training Data Collected')
         training_gen = self.augment_data()
         training_gen.fit(train_images)
@@ -127,6 +110,9 @@ class model():
         plot_training_alt(tracker, self.epochs)
 
     def evaluate(self):
+        """
+        Evaluates the model over the entire testing dataset to get an overall accuracy and loss.
+        """
         if len(self.test_data) == 0:
             print('Getting Test Data')
             self.load_testing_data()
@@ -138,12 +124,25 @@ class model():
         print(evaluate) # [loss, accuracy]
         return evaluate
 
-    # from hw2 assignment
     def rgb2gray(self, rgb):
+        """
+        FROM HW2 Assignment.
+        Condenses RGB image into 1 channel grayscale.
+        """
         gray = np.dot(rgb[...,:3],[0.29894, 0.58704, 0.11402])
         return gray
 
     def _load_data(self, directory, label):
+        """
+        Given a directory and label, loads every image of that directory,
+        as a numpy array, into a set and assigns the label to each item in
+        that set accordingly. Will condense RGB images into 1 channel.
+
+        :directory: directory filepath to look for images
+        :label: label to assign to each image
+
+        :return: a list of images as numpy arrays and their associated labels
+        """
         images, labels = [], []
         files = listdir(directory)
         for filename in files:
@@ -161,6 +160,12 @@ class model():
         return np.array(images), np.array(labels)
 
     def load_training_data(self):
+        """
+        Loads training pneumonia and normal images into a two lists, randomizes them, and
+        generates a class weight dict for training purposes.
+
+        :return: shuffled array of image data, shuffled labels (in the same order), and wieghts dict
+        """
         pneumonia_training_directory = './data/train/PNEUMONIA/'
         normal_training_directory = './data/train/NORMAL/'
 
@@ -181,6 +186,11 @@ class model():
         return shuff_images, shuff_labels, weight_dict
 
     def load_testing_data(self):
+        """
+        Loads test pneumonia and normal images into a two lists and randomizes them
+
+        :return: test images in an array and thier labels
+        """
         normal_test_directory = './data/test/NORMAL/'
         pneumonia_test_directory = './data/test/PNEUMONIA/'
 
@@ -196,7 +206,6 @@ class model():
         print('Test Data Details- Images:', test_images.shape, 'Labels:', test_labels.shape)
         return test_images, test_labels
 
-    # serialize model to JSON
     def save_model(self, filename='model'):
         """
         Save the model structure as filename.json and the trained model weights
@@ -207,7 +216,6 @@ class model():
         model_json = self.model.to_json()
         with open(filename + '.json', 'w') as json_file:
             json_file.write(model_json)
-        # serialize weights to HDF5
         self.model.save_weights(filename + '.h5')
         print('Saved model to as', filename)
 
