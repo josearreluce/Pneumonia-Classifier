@@ -2,6 +2,13 @@
 #### Jose Arreluce and Max Demers
 
 ### Setup
+Requirements:
+    * Python 3.6 or greater
+Run:
+```bash
+pip3 install -r requirements.txt
+```
+
 Download the dataset from: [Kaggle Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia)
 
 Unzip the directory, and __rename the outermost directory from "chest_xray" to "data"__

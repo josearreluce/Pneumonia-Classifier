@@ -1,7 +1,6 @@
 import re
-import timeit
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from os import listdir
 
 
