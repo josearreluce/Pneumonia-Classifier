@@ -1,9 +1,9 @@
-import tensorflow as tf
-from tensorflow import keras
 import numpy as np
+from os import listdir
+from sklearn.utils import shuffle
 from scipy.misc import imread
 from skimage.transform import resize
-from os import listdir
+from tensorflow.train import AdamOptimizer
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Conv2D
@@ -12,15 +12,7 @@ from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import model_from_json
-from sklearn.utils import shuffle
 from visualize import plot_training_alt, plot_training
-
-import numpy as np
-import matplotlib.pyplot as plt
-import timeit
-import os
-import glob
-import re
 
 
 class model():
