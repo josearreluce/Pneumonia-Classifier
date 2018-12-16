@@ -29,7 +29,7 @@ class evaluateModel():
         loaded_model.load_weights('model.h5')
         print('Loaded model')
 
-        loaded_model.compile(optimizer=tf.train.AdamOptimizer(),
+        loaded_model.compile(optimizer=AdamOptimizer(),
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
@@ -82,11 +82,11 @@ class evaluateModel():
         # Get last convolutional layer from the model
         last_conv_layer = self.model.get_layer('final_model_conv')
         # Create gradient of the conv layer vs. the final output
-        grads = K.gradients(output, last_conv_layer.output)[0]
-        mean_grads = K.mean(grads, axis=(0, 1, 2))
+        grads = backend.gradients(output, last_conv_layer.output)[0]
+        mean_grads = backend.mean(grads, axis=(0, 1, 2))
 
         # Function to grab the mean gradient and the raw conv layer output given model input
-        get_cam_vals = K.function([self.model.input], [mean_grads, last_conv_layer.output[0]])
+        get_cam_vals = backend.function([self.model.input], [mean_grads, last_conv_layer.output[0]])
         grads_val, final_conv_val = get_cam_vals([img])
 
         for i in range(last_conv_layer.output.shape[-1]):
