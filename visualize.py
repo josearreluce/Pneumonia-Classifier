@@ -1,26 +1,27 @@
+import re
+import timeit
 import numpy as np
 import matplotlib.pyplot as plt
-import timeit
-import os
-import glob
-import re
-
-pneumonia_training_directory = './data/train/PNEUMONIA/'
-normal_training_directory = './data/train/NORMAL/'
+from os import listdir
 
 
-def training_data_details():
-    sicc = os.listdir(pneumonia_training_directory)
-    norm = os.listdir(normal_training_directory)
+def data_details(d_type):
+    """
+    Given image data subdirectory type, gets information of image types available and
+    creates a visualization of that information and prints the raw counts as well
 
-    bac = [f for f in sicc if re.match(r'.*_bacteria_.*.jpeg', f)]
-    vir = [f for f in sicc if re.match(r'.*_virus_.*.jpeg', f)]
+    :d_type: the data subdirectory (train, test, or val)
+    """
+    infected = listdir('./data/' + d_type + '/PNEUMONIA/')
+    norm = listdir('./data/' + d_type + '/NORMAL/')
 
-    print('Bacterial:', len(bac))
-    print('Viral:', len(vir))
-    print('Total Pneumonia', len(sicc))
-    print('Total Normal', len(norm))
-    print('Total Training Images', len(sicc) + len(norm))
+    bac = [f for f in infected if re.match(r'.*_bacteria_.*.jpeg', f)]
+    vir = [f for f in infected if re.match(r'.*_virus_.*.jpeg', f)]
+
+    print(d_type)
+    print('     Total Pneumonia', len(infected),' (Bacterial:', len(bac), ')(Viral:', len(vir), ')')
+    print('     Total Normal', len(norm))
+    print('     Total Training Images', len(infected) + len(norm))
 
     fig, ax = plt.subplots()
     index = np.arange(4)
@@ -33,9 +34,9 @@ def training_data_details():
     b1 = plt.bar(r, bars1, color=['#FFD700', '#ff5700'], edgecolor='black', width=barWidth)
     b2 = plt.bar(r, bars2, bottom=bars1, color='#5700ff', edgecolor='black', width=barWidth)
 
-    ax.set_xlabel('Training Data Labels')
+    ax.set_xlabel(d_type + ' Data Labels')
     ax.set_ylabel('X-Ray Image Count')
-    ax.set_title('Training Data Details')
+    ax.set_title(d_type + ' Data Details')
     plt.xticks(r, names, fontweight='bold')
     labels = ('Normal ({})'.format(len(norm)), 'Bacterial ({})'.format(len(bac)), 'Viral ({})'.format(len(vir)))
 
@@ -46,6 +47,10 @@ def training_data_details():
 
 
 def plot_training(tracker):
+    """
+    plots the training accuracy and loss over the span of the training session,
+    as well as the testing accuracy and loss
+    """
     # Loss Curves
     plt.figure(figsize=[8,6])
     plt.plot(tracker.history['loss'],'r',linewidth=3.0)
@@ -54,6 +59,7 @@ def plot_training(tracker):
     plt.xlabel('Epochs ',fontsize=16)
     plt.ylabel('Loss',fontsize=16)
     plt.title('Loss Curves',fontsize=16)
+    plt.savefig('training.png')
 
     # Accuracy Curves
     plt.figure(figsize=[8,6])
@@ -63,22 +69,29 @@ def plot_training(tracker):
     plt.xlabel('Epochs ',fontsize=16)
     plt.ylabel('Accuracy',fontsize=16)
     plt.title('Accuracy Curves',fontsize=16)
-    plt.savefig('training.png')
-    #plt.show()
+    plt.savefig('testing.png')
 
 def plot_training_alt(tracker, epochs):
+    """
+    plots the training accuracy and loss over the span of the training session,
+    as well as the testing accuracy and loss, but does it all in one plot
+    """
     # plot the training loss and accuracy
-    plt.style.use("ggplot")
+    plt.style.use('ggplot')
     plt.figure()
     N = epochs
-    plt.plot(np.arange(0, N), tracker.history["loss"], label="train_loss")
-    plt.plot(np.arange(0, N), tracker.history["acc"], label="train_acc")
-    plt.title("Training Loss and Accuracy on Santa/Not Santa")
-    plt.xlabel("Epoch #")
-    plt.ylabel("Loss/Accuracy")
-    plt.legend(loc="lower left")
+    plt.plot(np.arange(0, N), tracker.history['loss'], label='training loss')
+    plt.plot(np.arange(0, N), tracker.history['acc'], label='training acc')
+    plt.plot(np.arange(0, N), tracker.history['val_loss'], label='eval loss')
+    plt.plot(np.arange(0, N), tracker.history['val_acc'], label='eval acc')
+    plt.title('Training Loss and Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss and Accuracy')
+    plt.legend(loc='center right')
     plt.savefig('training_alt.png')
-    
+
 if __name__ == '__main__':
-    training_data_details()
+    data_details('train')
+    data_details('test')
+    data_details('val')
 
