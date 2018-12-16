@@ -14,6 +14,8 @@ Download the dataset from: [Kaggle Chest X-Ray Images (Pneumonia)](https://www.k
 
 Unzip the directory, and __rename the outermost directory from "chest_xray" to "data"__
 
+Move the "data" directory into the same location as "model.py"
+
 ### Data Exploration
 Run visualize.py to see basic dataset information
 
