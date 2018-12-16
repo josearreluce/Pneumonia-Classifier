@@ -31,6 +31,10 @@ class model():
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
+        self.training_directory = './data/train/'
+        self.testing_directory = './data/test/'
+        self.val_directory = './data/val/'
+
     def create_model(self):
         model = Sequential()
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(244, 244, 1)))
@@ -68,8 +72,10 @@ class model():
         return generator
 
     def train(self):
-        train_images, train_labels, label_weights  = self.load_training_data()
-        test_images, test_labels = self.load_testing_data() # TODO use val not test
+        train_images, train_labels, label_weights = self._load_directory(self.training_directory)
+
+        test_images, test_labels, test_weights = self._load_directory(self.testing_directory)
+
         print('Training Data Collected')
         training_gen = self.augment_data()
         training_gen.fit(train_images)
@@ -114,22 +120,47 @@ class model():
         gray = np.dot(rgb[...,:3],[0.29894, 0.58704, 0.11402])
         return gray
 
+    def _load_image(self, directory, filename):
+        image = imread(directory + filename)
+        image = image / 255
+        if image.ndim == 3:
+            image = self.rgb2gray(image)
+        image = resize(image, (244, 244, 1))
+        return image
+
     def _load_data(self, directory, label):
         images, labels = [], []
         files = listdir(directory)
         for filename in files:
             try:
-                image = imread(directory + filename)
-                image = image / 255
-                if image.ndim == 3:
-                    image = self.rgb2gray(image)
-                image = resize(image, (244, 244, 1))
+                image = self._load_image(directory, filename)
                 images.append(image)
                 labels.append(label)
             except Exception as i:
                 print('CAUGHT: ', i)
 
         return np.array(images), np.array(labels)
+
+    def _load_directory(self, directory, label):
+        pneumonia_directory = directory + 'PNEUMONIA/'
+        normal_directory = directory + 'NORMAL/'
+
+        images_sick, labels_sick = self._load_data(pneumonia_directory, 1)
+        images_norm, labels_norm = self._load_data(normal_directory, 0)
+
+        images = np.concatenate((images_sick, images_norm), axis=0)
+        labels = np.concatenate((labels_sick, labels_norm), axis=0)
+
+        shuffled_images, shuffled_labels = shuffle(images, labels, random_state=5)
+
+        print('Data Details- Images:', shuffled_images.shape, 'Labels:', shuffled_labels.shape)
+
+        weight_dict = {
+            1: len(images_norm) // len(images_sick) if len(images_norm) > len(images_sick) else 1,
+            0: len(images_sick) // len(images_norm) if len(images_sick) > len(images_norm) else 1
+        }
+
+        return shuffled_images, shuffled_labels, weight_dict
 
     def load_training_data(self):
         pneumonia_training_directory = './data/train/PNEUMONIA/'
