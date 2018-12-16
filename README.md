@@ -2,8 +2,9 @@
 #### Jose Arreluce and Max Demers
 
 ### Setup
-Requirements:
-    * Python 3.6 or greater
+
+Created and tested using Python 3.6
+
 Run:
 ```bash
 pip3 install -r requirements.txt
