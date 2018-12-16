@@ -24,15 +24,17 @@ class model():
         self.test_data = None
         self.test_labels = None
         self.tracker = None
+        self.img_shape = (224, 224, 1)
 
         self.model = self.create_model()
-        self.model.compile(optimizer=tf.train.AdamOptimizer(),
+        self.model.compile(optimizer=AdamOptimizer(),
                            #loss='sparse_categorical_crossentropy',
                            loss='binary_crossentropy',
                            metrics=['accuracy'])
 
     def create_model(self):
         model = Sequential()
+        '''
         model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(244, 244, 1)))
         model.add(Conv2D(32, (3, 3), activation='relu'))
         model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -51,6 +53,32 @@ class model():
         model.add(Flatten())
         model.add(Dense(512, activation='sigmoid'))
         model.add(Dropout(0.5))
+        model.add(Dense(1, activation='sigmoid'))
+        '''
+        model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=self.img_shape))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(128, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(256, (3, 3), activation='relu', name='final_model_conv'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Flatten())
+        model.add(Dense(1024, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(512, activation='relu')) # TODO CONFIRM
         model.add(Dense(1, activation='sigmoid'))
         print(model.summary())
         return model
@@ -123,7 +151,7 @@ class model():
                 image = image / 255
                 if image.ndim == 3:
                     image = self.rgb2gray(image)
-                image = resize(image, (244, 244, 1))
+                image = resize(image, self.img_shape)
                 images.append(image)
                 labels.append(label)
             except Exception as i:
